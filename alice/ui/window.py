@@ -329,10 +329,8 @@ class MainWindow(QMainWindow):
             self.chat_panel.load_history(history)
         self.status_label.setText(f"✅ 已切换: {preset_name}")
         self._update_chat_llm_status()
-        # 异步刷新后立即更新情绪栏，不等 500ms 定时器
-        def _force_emotion_update(_):
-            self._on_emotion_timer()
-        self.async_run(self.session.refresh_display_state(), _force_emotion_update)
+        # 直接读取 switch_preset 已刷新的状态更新情绪栏
+        self._on_emotion_timer()
 
     def _on_llm_changed(self, _connected: bool):
         """LLM 连接/断开 → 同步状态到聊天面板和状态栏"""
