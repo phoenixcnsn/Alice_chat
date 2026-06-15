@@ -1,0 +1,8 @@
+PySide6>=6.6
+httpx
+openai
+chromadb
+sentence-transformers
+tufup
+pyinstaller
+replicate

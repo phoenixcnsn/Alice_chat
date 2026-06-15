@@ -1,0 +1,15 @@
+/* Alice Chat — 暗色主题 */
+* { font-family: "Microsoft YaHei", "Segoe UI", sans-serif; font-size: 13px; }
+QMainWindow { background: #0a0a14; }
+#sidebar { background: #0d0d1a; border-right: 1px solid #1a1a2e; }
+#navBtn { background: transparent; border: none; font-size: 18px; border-radius: 10px; }
+#navBtn:hover { background: #1a1a2e; }
+#navBtn:checked { background: #3a1a5c; border: 1px solid #7c3aed; }
+QScrollBar:vertical { background: #0a0a14; width: 8px; }
+QScrollBar::handle:vertical { background: #333; border-radius: 4px; min-height: 30px; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QToolTip { background: #1a1a2e; color: #ddd; border: 1px solid #333; border-radius: 4px; padding: 4px 8px; }
+QStatusBar { background: #0d0d1a; color: #888; border-top: 1px solid #1a1a2e; font-size: 11px; }
+QPushButton { border-radius: 6px; }
+QLineEdit, QTextEdit { border-radius: 6px; }
+QComboBox { border-radius: 6px; }
