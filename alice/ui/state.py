@@ -80,11 +80,13 @@ def apply_engine_snapshot(agent, snapshot: dict):
         return
     try:
         engine = agent.engine
-        for attr, _key in ENGINE_STATE_KEYS:
-            if attr in snapshot and hasattr(engine, attr):
-                setattr(engine, attr, snapshot[attr])
-        if '_last_activity' in snapshot and hasattr(engine, '_last_activity'):
-            engine._last_activity = snapshot['_last_activity']
+        for attr, key in ENGINE_STATE_KEYS:
+            # snapshot 使用 JSON 风格的 key（无下划线前缀）
+            if key in snapshot and hasattr(engine, attr):
+                setattr(engine, attr, snapshot[key])
+        # last_activity 同样是无下划线前缀的 key
+        if 'last_activity' in snapshot and hasattr(engine, '_last_activity'):
+            engine._last_activity = snapshot['last_activity']
         engine._loaded = True
     except Exception as e:
         print(f"[App] 应用快照失败: {e}")

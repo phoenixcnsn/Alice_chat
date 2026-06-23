@@ -13,13 +13,23 @@ from PyQt5.QtGui import (
 
 
 class ChatBubbleDelegate(QStyledItemDelegate):
-    """渲染聊天气泡（文字 + 可选图片）+ 文字选中高亮"""
+    """渲染聊天气泡（文字 + 可选图片）+ 文字选中高亮 — Elysia 主题"""
 
-    PADDING = 8
-    BUBBLE_RADIUS = 12
-    MAX_BUBBLE_WIDTH = 500
+    PADDING = 14
+    BUBBLE_RADIUS = 16
+    MAX_BUBBLE_WIDTH = 480
     THUMB_SIZE = 200
     _MAX_CACHE = 50
+
+    # Elysia 主题色
+    _USER_BUBBLE_BG = QColor("#c02669")      # 粉红 — 用户气泡
+    _USER_BUBBLE_BG2 = QColor("#9d174d")     # 深粉 — 渐变辅助
+    _AI_BUBBLE_BG = QColor("#13132b")        # 深紫黑 — AI 气泡
+    _AI_BUBBLE_BORDER = QColor("#252545")    # AI 气泡边框
+    _TEXT_USER = QColor("#fce7f3")           # 用户文字
+    _TEXT_AI = QColor("#e2e8f0")             # AI 文字
+    _TEXT_TIMESTAMP = QColor("#64748b")      # 时间戳
+    _SELECTION_BG = QColor("#a855f7")        # 选中高亮
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -58,6 +68,7 @@ class ChatBubbleDelegate(QStyledItemDelegate):
 
         painter.translate(option.rect.topLeft())
         full_w = option.rect.width()
+        margin_h = 16  # 水平边距
 
         # ---- 图片缩略图 ----
         img_h = 0
@@ -82,19 +93,40 @@ class ChatBubbleDelegate(QStyledItemDelegate):
                     self.MAX_BUBBLE_WIDTH + self.PADDING * 2)
         if img_h:
             doc_w = max(doc_w, float(self.THUMB_SIZE))
-        doc_w = max(doc_w, 60.0)
+        doc_w = max(doc_w, 70.0)
         doc_h = self._doc.size().height() + self.PADDING * 2
-        bubble_h = max(doc_h, 28.0)
+        bubble_h = max(doc_h, 32.0)
 
         # ---- 气泡位置 ----
-        bx = full_w - doc_w - 12 if is_user else 12
-        by = 4
-        total_h = bubble_h + img_h + (4 if img_h else 0)
+        if is_user:
+            bx = full_w - doc_w - margin_h
+        else:
+            bx = margin_h + 28  # 给头像留空间
 
-        # ---- 气泡背景 ----
+        by = 6
+        total_h = bubble_h + img_h + (6 if img_h else 0)
+
+        # ---- AI 头像指示 ----
+        if not is_user:
+            avatar_x = 10
+            avatar_y = int(by + 8)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor("#a855f7"))
+            painter.drawRoundedRect(QRect(avatar_x, avatar_y, 20, 20), 6, 6)
+            painter.setPen(QColor("#fce7f3"))
+            painter.setFont(QFont("Microsoft YaHei", 9))
+            painter.drawText(QRect(avatar_x, avatar_y, 20, 20),
+                           Qt.AlignCenter, "E")
+
+        # ---- 气泡阴影（AI 气泡有边框） ----
         painter.setPen(Qt.NoPen)
-        bg_color = QColor("#3a1a5c") if is_user else QColor("#1a1a2e")
-        painter.setBrush(bg_color)
+        if is_user:
+            # 用户气泡 — 纯粉紫填充
+            painter.setBrush(self._USER_BUBBLE_BG)
+        else:
+            # AI 气泡 — 先画边框再画填充
+            painter.setPen(self._AI_BUBBLE_BORDER)
+            painter.setBrush(self._AI_BUBBLE_BG)
         bubble_rect = QRect(int(bx), int(by), int(doc_w), int(total_h))
         painter.drawRoundedRect(bubble_rect, self.BUBBLE_RADIUS, self.BUBBLE_RADIUS)
 
@@ -102,8 +134,8 @@ class ChatBubbleDelegate(QStyledItemDelegate):
         if img_path and img_path in self._pixmap_cache:
             pm = self._pixmap_cache[img_path]
             img_x = int(bx + (doc_w - pm.width()) / 2)
-            painter.drawPixmap(img_x, int(by + 6), pm)
-            by += img_h + 4
+            painter.drawPixmap(img_x, int(by + 8), pm)
+            by += img_h + 6
 
         # ---- 文字（含选中高亮） ----
         text_x = int(bx + self.PADDING)
@@ -117,16 +149,15 @@ class ChatBubbleDelegate(QStyledItemDelegate):
         self._doc.setTextWidth(text_w)
 
         sel = self._get_selection(index.row())
-        painter.setPen(Qt.white if is_user else QColor("#ddd"))
+        text_color = self._TEXT_USER if is_user else self._TEXT_AI
 
         if sel:
-            # ---- 有选中：用 PaintContext 渲染高亮 ----
             cursor = QTextCursor(self._doc)
             cursor.setPosition(sel[0])
             cursor.setPosition(sel[1], QTextCursor.KeepAnchor)
 
             sel_fmt = QTextCharFormat()
-            sel_fmt.setBackground(QColor("#7c3aed"))
+            sel_fmt.setBackground(self._SELECTION_BG)
             sel_fmt.setForeground(Qt.white)
 
             es = QAbstractTextDocumentLayout.Selection()
@@ -135,7 +166,7 @@ class ChatBubbleDelegate(QStyledItemDelegate):
 
             ctx = QAbstractTextDocumentLayout.PaintContext()
             ctx.selections = [es]
-            ctx.palette.setColor(QPalette.Text, Qt.white if is_user else QColor("#ddd"))
+            ctx.palette.setColor(QPalette.Text, text_color)
 
             painter.save()
             painter.translate(text_x, text_y)
@@ -144,6 +175,8 @@ class ChatBubbleDelegate(QStyledItemDelegate):
         else:
             painter.save()
             painter.translate(text_x, text_y)
+            self._doc.setDefaultFont(QFont("Microsoft YaHei", 10))
+            painter.setPen(text_color)
             self._doc.drawContents(painter)
             painter.restore()
 
@@ -161,4 +194,4 @@ class ChatBubbleDelegate(QStyledItemDelegate):
         self._doc.setPlainText(text)
         self._doc.setTextWidth(min(self.MAX_BUBBLE_WIDTH, w * 0.7))
         doc_h = self._doc.size().height() + self.PADDING * 2
-        return QSize(w, int(max(doc_h + img_h + 16, 36)))
+        return QSize(w, int(max(doc_h + img_h + 20, 44)))

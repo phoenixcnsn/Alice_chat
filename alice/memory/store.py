@@ -12,6 +12,7 @@ SQLite 记忆存储层 — 全量留存 + FTS5 全文检索 + 滚动摘要
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import os
 import sqlite3
@@ -131,10 +132,26 @@ class MemoryStore(SQLiteStore):
         conn.close()
 
     def _encrypt(self, text: str) -> str:
-        return text  # 本地 SQLite 明文存储以支持搜索；传 crypto_key 时加密
+        """加密文本。
+        - 无 crypto_key: 明文存储，以支持 FTS5/LIKE 搜索。
+        - 有 crypto_key: Fernet 加密后 base64 编码存储。
+          注意：加密后 LIKE/FTS5 搜索将不可用。
+        """
+        if self.crypto is None:
+            return text
+        encrypted_bytes = self.crypto.encrypt(text)
+        return base64.b64encode(encrypted_bytes).decode("utf-8")
 
     def _decrypt(self, data: str) -> str:
-        return data
+        """解密文本。无 crypto_key 时原样返回。"""
+        if self.crypto is None:
+            return data
+        try:
+            encrypted_bytes = base64.b64decode(data.encode("utf-8"))
+            return self.crypto.decrypt(encrypted_bytes)
+        except Exception:
+            # 兼容旧数据（可能是明文或损坏数据）
+            return data
 
     # ----------------------------------------------------------------
     # 消息存储（全量留存，不可删除）
@@ -295,8 +312,13 @@ class MemoryStore(SQLiteStore):
     def search_fts(self, query: str, limit: int = 10) -> List[int]:
         """
         关键词检索，返回 memory_fragment IDs。
-        使用 LIKE 匹配解密后的 content 字段。
+        使用 LIKE 匹配 content 字段。
+
+        注意：启用加密后 LIKE 匹配不可用，返回空列表。
         """
+        if self.crypto is not None:
+            return []  # 加密存储时无法做 LIKE 搜索
+
         conn = self._connect()
         ids = []
         # 对每个关键词做 LIKE 匹配
@@ -321,13 +343,18 @@ class MemoryStore(SQLiteStore):
         return ids[:limit]
 
     def search_fragments(self, query: str, limit: int = 10) -> List[MemoryFragment]:
+        """关键词检索记忆碎片。加密模式下返回空列表。"""
+        if self.crypto is not None:
+            return []
         ids = self.search_fts(query, limit)
         return self.get_fragments_by_ids(ids)
 
     def get_fragments_by_entities(self, entities: List[str], limit: int = 10) -> List[MemoryFragment]:
-        """按实体聚合检索"""
+        """按实体聚合检索。加密模式下返回空列表。"""
         if not entities:
             return []
+        if self.crypto is not None:
+            return []  # 加密存储时无法做 LIKE 搜索
         conn = self._connect()
         # 用 LIKE 匹配 entities JSON 字段
         rows = []
@@ -369,3 +396,143 @@ class MemoryStore(SQLiteStore):
             importance=r["importance"],
             created_at=r["created_at"], updated_at=r["updated_at"]
         ) for r in rows]
+
+    # ----------------------------------------------------------------
+    # 记忆衰减与强化（遗忘机制）
+    # ----------------------------------------------------------------
+    def reinforce_fragment(self, fragment_id: int, boost: float = 0.15):
+        """
+        强化记忆碎片：提升 importance 权重。
+
+        公式: new_weight = min(1.0, old_weight * 0.95 + boost)
+
+        Args:
+            fragment_id: 碎片 ID
+            boost: 单次强化增量 (0~1)，默认 0.15
+        """
+        conn = self._connect()
+        row = conn.execute(
+            "SELECT importance FROM memory_fragments WHERE id=?", (fragment_id,)
+        ).fetchone()
+        if row is None:
+            conn.close()
+            return
+        old_weight = row["importance"]
+        new_weight = min(1.0, old_weight * 0.95 + boost)
+        now = time.time()
+        conn.execute(
+            "UPDATE memory_fragments SET importance=?, updated_at=? WHERE id=?",
+            (new_weight, now, fragment_id),
+        )
+        conn.commit()
+        conn.close()
+
+    def decay_fragments(
+        self,
+        half_life_days: float = 30.0,
+        min_weight: float = 0.1,
+    ) -> int:
+        """
+        对所有记忆碎片应用指数衰减。
+
+        公式: weight(t) = weight_0 * (1/2)^(t / halfLife)
+
+        只更新上次更新距今超过 1 天的碎片（避免频繁更新刚操作的碎片）。
+
+        Args:
+            half_life_days: 半衰期（天），默认 30 天
+            min_weight: 最低权重阈值
+
+        Returns:
+            被降权到 min_weight 以下的碎片数量
+        """
+        conn = self._connect()
+        now = time.time()
+        half_life_seconds = half_life_days * 86400.0
+        decay_factor_per_second = 0.5 ** (1.0 / half_life_seconds)
+        one_day_ago = now - 86400.0
+
+        # 获取超过 1 天未更新的碎片
+        rows = conn.execute(
+            "SELECT id, importance, updated_at FROM memory_fragments WHERE updated_at < ?",
+            (one_day_ago,)
+        ).fetchall()
+
+        below_threshold = 0
+        for r in rows:
+            age_seconds = now - r["updated_at"]
+            decay_multiplier = decay_factor_per_second ** age_seconds
+            new_weight = r["importance"] * decay_multiplier
+            if new_weight < min_weight:
+                below_threshold += 1
+            conn.execute(
+                "UPDATE memory_fragments SET importance=? WHERE id=?",
+                (max(new_weight, 0.0), r["id"]),
+            )
+
+        conn.commit()
+        conn.close()
+        return below_threshold
+
+    def purge_low_weight_fragments(self, min_weight: float = 0.1) -> int:
+        """
+        删除 importance 低于阈值的记忆碎片。
+
+        ChromaDB 端采用惰性清理：已删除的碎片 ID 在后续检索时
+        会因为 SQLite 中不存在而被 get_fragments_by_ids 过滤掉。
+
+        Args:
+            min_weight: 最低权重阈值，默认 0.1
+
+        Returns:
+            删除的碎片数量
+        """
+        conn = self._connect()
+        # 先获取将被删除的 IDs（用于 ChromaDB 清理）
+        to_delete = conn.execute(
+            "SELECT id FROM memory_fragments WHERE importance < ?", (min_weight,)
+        ).fetchall()
+        deleted_ids = [str(r["id"]) for r in to_delete]
+
+        cursor = conn.execute(
+            "DELETE FROM memory_fragments WHERE importance < ?", (min_weight,)
+        )
+        deleted = cursor.rowcount
+        conn.commit()
+        conn.close()
+
+        # 同步清理 ChromaDB
+        if deleted > 0 and deleted_ids:
+            try:
+                from alice.memory.chroma_client import get_memory_collection
+                col = get_memory_collection()
+                if col:
+                    col.delete(ids=deleted_ids)
+            except Exception:
+                pass  # ChromaDB 不可用或 ID 不存在时忽略
+
+        return deleted
+
+    def get_fragment_stats(self) -> dict:
+        """获取记忆碎片统计信息"""
+        conn = self._connect()
+        total = conn.execute("SELECT COUNT(*) FROM memory_fragments").fetchone()[0]
+        avg_imp = conn.execute(
+            "SELECT COALESCE(AVG(importance), 0) FROM memory_fragments"
+        ).fetchone()[0]
+        below = conn.execute(
+            "SELECT COUNT(*) FROM memory_fragments WHERE importance < 0.1"
+        ).fetchone()[0]
+        by_type = {}
+        for row in conn.execute(
+            "SELECT fragment_type, COUNT(*) as cnt FROM memory_fragments "
+            "GROUP BY fragment_type"
+        ).fetchall():
+            by_type[row["fragment_type"]] = row["cnt"]
+        conn.close()
+        return {
+            "total": total,
+            "avg_importance": round(avg_imp, 4),
+            "below_threshold": below,
+            "by_type": by_type,
+        }

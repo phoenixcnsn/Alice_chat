@@ -212,10 +212,10 @@ class ChatPanel(QWidget):
         # LLM 连接状态标签
         self.status_label = QLabel("⚪ 未连接 LLM — 请在设置中配置 API Key")
         self.status_label.setStyleSheet(
-            "QLabel { color: #888; font-size: 11px; padding: 4px 10px; "
-            "background: #0d0d1a; border-radius: 4px; }"
+            "QLabel { color: #64748b; font-size: 11px; padding: 4px 12px; "
+            "background: #0a0a18; border-radius: 6px; border: 1px solid #1a1a30; }"
         )
-        self.status_label.setFixedHeight(22)
+        self.status_label.setFixedHeight(24)
         layout.addWidget(self.status_label)
 
         # 消息列表（支持文字选中）
@@ -227,7 +227,7 @@ class ChatPanel(QWidget):
         self.list_view.setSelectionMode(QListView.NoSelection)
         self.list_view.setVerticalScrollMode(QListView.ScrollPerPixel)
         self.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.list_view.setStyleSheet("QListView { background: #0a0a14; border: none; }")
+        self.list_view.setStyleSheet("QListView { background: #06060d; border: none; }")
         layout.addWidget(self.list_view, stretch=1)
 
         # 输入区域
@@ -238,29 +238,30 @@ class ChatPanel(QWidget):
         self.input_box.setPlaceholderText("输入消息... (Enter 发送)")
         self.input_box.setStyleSheet("""
             QLineEdit {
-                background: #1a1a2e;
-                color: #ddd;
-                border: 1px solid #333;
-                border-radius: 8px;
-                padding: 8px 12px;
+                background: #0e0e1e;
+                color: #e2e8f0;
+                border: 1px solid #252545;
+                border-radius: 10px;
+                padding: 10px 14px;
                 font-size: 13px;
             }
-            QLineEdit:focus { border-color: #7c3aed; }
+            QLineEdit:focus { border-color: #a855f7; }
         """)
         self.input_box.returnPressed.connect(self._send)
 
         self.send_btn = QPushButton("发送")
         self.send_btn.setStyleSheet("""
             QPushButton {
-                background: #7c3aed;
+                background: #a855f7;
                 color: white;
                 border: none;
-                border-radius: 8px;
-                padding: 8px 18px;
+                border-radius: 10px;
+                padding: 10px 20px;
                 font-size: 13px;
+                font-weight: bold;
             }
-            QPushButton:hover { background: #6d28d9; }
-            QPushButton:pressed { background: #5b21b6; }
+            QPushButton:hover { background: #9333ea; }
+            QPushButton:pressed { background: #7c3aed; }
         """)
         self.send_btn.clicked.connect(self._send)
 
@@ -356,19 +357,19 @@ class ChatPanel(QWidget):
             info = f"{provider}"
             if model:
                 info += f" ({model})"
-            self.status_label.setText(f"🟢 已连接: {info}{img_status}")
+            self.status_label.setText(f"● 已连接: {info}{img_status}")
             self.status_label.setStyleSheet(
-                "QLabel { color: #8f8; font-size: 11px; padding: 4px 10px; "
-                "background: #0d1a0d; border-radius: 4px; }"
+                "QLabel { color: #a78bfa; font-size: 11px; padding: 4px 12px; "
+                "background: #0a0a18; border-radius: 6px; border: 1px solid #2a1a4a; }"
             )
         else:
-            base = "⚪ 未连接 LLM — 请在设置中配置 API Key"
+            base = "○ 未连接 LLM — 请在设置中配置 API Key"
             if img_status:
-                base = "⚪ 未连接 LLM" + img_status + " — 请在设置中配置 API Key"
+                base = "○ 未连接 LLM" + img_status + " — 请在设置中配置 API Key"
             self.status_label.setText(base)
             self.status_label.setStyleSheet(
-                "QLabel { color: #888; font-size: 11px; padding: 4px 10px; "
-                "background: #0d0d1a; border-radius: 4px; }"
+                "QLabel { color: #64748b; font-size: 11px; padding: 4px 12px; "
+                "background: #0a0a18; border-radius: 6px; border: 1px solid #1a1a30; }"
             )
 
     def _tick_thinking(self):

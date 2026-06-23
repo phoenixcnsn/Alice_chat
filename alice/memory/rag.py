@@ -23,26 +23,13 @@ from alice.memory.store import MemoryStore, MemoryFragment
 
 
 # ------------------------------------------------------------
-# ChromaDB (lazy import)
+# ChromaDB — 共享客户端 (alice.memory.chroma_client)
 # ------------------------------------------------------------
-_CHROMA_AVAILABLE = False
-_chroma_client = None
-_collection = None
+from alice.memory.chroma_client import get_memory_collection
 
 def _get_chroma():
-    global _CHROMA_AVAILABLE, _chroma_client, _collection
-    if not _CHROMA_AVAILABLE:
-        try:
-            import chromadb
-            _chroma_client = chromadb.PersistentClient(path="data/chroma")
-            _collection = _chroma_client.get_or_create_collection(
-                name="persona_memories",
-                metadata={"hnsw:space": "cosine"},
-            )
-            _CHROMA_AVAILABLE = True
-        except ImportError:
-            pass
-    return _collection
+    """获取记忆 ChromaDB collection（委托给共享客户端）"""
+    return get_memory_collection()
 
 
 # ------------------------------------------------------------
@@ -194,6 +181,14 @@ class MemoryRAG:
         # 保持 RRF 顺序
         score_map = dict(fused)
         frags.sort(key=lambda f: score_map.get(f.id, 0), reverse=True)
+
+        # 强化被检索到的记忆（微小 boost，降低衰减速度）
+        for f in frags[:top_n]:
+            try:
+                self.store.reinforce_fragment(f.id, boost=0.02)  # 检索 boost 很小
+            except Exception:
+                pass
+
         return frags[:top_n]
 
     # ----------------------------------------------------------------
@@ -221,8 +216,7 @@ class MemoryRAG:
         batch_ids = self._extraction_batch[:batch_size]
         self._extraction_batch = self._extraction_batch[batch_size:]
 
-        batch_msgs = self.store.get_fragments_by_ids(batch_ids)  # no, we need messages
-        # 重建消息文本
+        # 从 messages 表查询原始消息文本
         conn = self.store._connect()
         placeholders = ",".join("?" * len(batch_ids))
         rows = conn.execute(

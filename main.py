@@ -14,6 +14,7 @@ warnings.filterwarnings("ignore", message=".*sm_120.*")
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject
+from PyQt5.QtGui import QColor
 
 from alice.ui.session import AgentSession
 from alice.ui.window import MainWindow
@@ -26,17 +27,18 @@ class _CallbackBridge(QObject):
 def setup_theme(app: QApplication):
     app.setStyle("Fusion")
     palette = app.palette()
-    palette.setColor(palette.Window, Qt.black)
-    palette.setColor(palette.WindowText, Qt.white)
-    palette.setColor(palette.Base, Qt.black)
-    palette.setColor(palette.AlternateBase, Qt.darkGray)
-    palette.setColor(palette.ToolTipBase, Qt.black)
-    palette.setColor(palette.ToolTipText, Qt.white)
-    palette.setColor(palette.Text, Qt.white)
-    palette.setColor(palette.Button, Qt.darkGray)
-    palette.setColor(palette.ButtonText, Qt.white)
-    palette.setColor(palette.Highlight, Qt.darkCyan)
-    palette.setColor(palette.HighlightedText, Qt.black)
+    # Elysia 水晶暗色主题
+    palette.setColor(palette.Window, QColor("#06060d"))
+    palette.setColor(palette.WindowText, QColor("#e2e8f0"))
+    palette.setColor(palette.Base, QColor("#0a0a16"))
+    palette.setColor(palette.AlternateBase, QColor("#0e0e1e"))
+    palette.setColor(palette.ToolTipBase, QColor("#1e1e36"))
+    palette.setColor(palette.ToolTipText, QColor("#e2e8f0"))
+    palette.setColor(palette.Text, QColor("#e2e8f0"))
+    palette.setColor(palette.Button, QColor("#1e1e36"))
+    palette.setColor(palette.ButtonText, QColor("#e2e8f0"))
+    palette.setColor(palette.Highlight, QColor("#a855f7"))
+    palette.setColor(palette.HighlightedText, QColor("#fce7f3"))
     app.setPalette(palette)
 
     qss_path = Path(__file__).parent / "alice" / "ui" / "resources" / "style.qss"

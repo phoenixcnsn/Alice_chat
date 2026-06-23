@@ -27,29 +27,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 # ------------------------------------------------------------
-# ChromaDB (lazy import — 与 memory_rag.py 共享同一模式)
+# ChromaDB — 共享客户端 (alice.memory.chroma_client)
 # ------------------------------------------------------------
-_STYLE_CHROMA_AVAILABLE = False
-_style_chroma_client = None
-_style_collection = None
-
+from alice.memory.chroma_client import get_style_collection
 
 def _get_style_chroma(path: str = "data/style_chroma"):
-    """获取风格向量存储的 ChromaDB collection"""
-    global _STYLE_CHROMA_AVAILABLE, _style_chroma_client, _style_collection
-    if not _STYLE_CHROMA_AVAILABLE:
-        try:
-            import chromadb
-            Path(path).mkdir(parents=True, exist_ok=True)
-            _style_chroma_client = chromadb.PersistentClient(path=path)
-            _style_collection = _style_chroma_client.get_or_create_collection(
-                name="character_style_examples",
-                metadata={"hnsw:space": "cosine"},
-            )
-            _STYLE_CHROMA_AVAILABLE = True
-        except ImportError:
-            pass
-    return _style_collection
+    """获取风格 ChromaDB collection（委托给共享客户端）"""
+    return get_style_collection(path)
 
 
 # ------------------------------------------------------------

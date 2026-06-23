@@ -1,15 +1,244 @@
-/* Alice Chat — 暗色主题 */
-* { font-family: "Microsoft YaHei", "Segoe UI", sans-serif; font-size: 13px; }
-QMainWindow { background: #0a0a14; }
-#sidebar { background: #0d0d1a; border-right: 1px solid #1a1a2e; }
-#navBtn { background: transparent; border: none; font-size: 18px; border-radius: 10px; }
-#navBtn:hover { background: #1a1a2e; }
-#navBtn:checked { background: #3a1a5c; border: 1px solid #7c3aed; }
-QScrollBar:vertical { background: #0a0a14; width: 8px; }
-QScrollBar::handle:vertical { background: #333; border-radius: 4px; min-height: 30px; }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-QToolTip { background: #1a1a2e; color: #ddd; border: 1px solid #333; border-radius: 4px; padding: 4px 8px; }
-QStatusBar { background: #0d0d1a; color: #888; border-top: 1px solid #1a1a2e; font-size: 11px; }
-QPushButton { border-radius: 6px; }
-QLineEdit, QTextEdit { border-radius: 6px; }
-QComboBox { border-radius: 6px; }
+/* ============================================================
+   Alice Chat — 爱莉希雅 水晶主题 (Elysia Crystal Theme)
+
+   设计语言:
+   - 深色底层 + 卡片式表面 + 粉紫强调色
+   - 参考: shadcn/ui dark mode + 爱莉希雅角色色系
+   - 圆角一致性: 8px 主圆角, 12px 气泡圆角
+   ============================================================ */
+
+/* ---------- 全局 ---------- */
+* {
+    font-family: "Microsoft YaHei", "Segoe UI", "PingFang SC", sans-serif;
+    font-size: 13px;
+}
+
+QMainWindow {
+    background: #06060d;
+}
+
+/* ---------- 滚动条 ---------- */
+QScrollBar:vertical {
+    background: #06060d;
+    width: 6px;
+    margin: 0;
+}
+QScrollBar::handle:vertical {
+    background: #2a2a40;
+    border-radius: 3px;
+    min-height: 36px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #3d3d5c;
+}
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0;
+}
+QScrollBar:horizontal {
+    background: #06060d;
+    height: 6px;
+}
+QScrollBar::handle:horizontal {
+    background: #2a2a40;
+    border-radius: 3px;
+    min-width: 36px;
+}
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0;
+}
+
+/* ---------- 提示 ---------- */
+QToolTip {
+    background: #1e1e36;
+    color: #e2e8f0;
+    border: 1px solid #33335a;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+/* ---------- 状态栏 ---------- */
+QStatusBar {
+    background: #0a0a16;
+    color: #94a3b8;
+    border-top: 1px solid #1a1a30;
+    font-size: 11px;
+    padding: 2px 8px;
+}
+
+/* ---------- 通用控件 ---------- */
+QPushButton {
+    border-radius: 8px;
+    padding: 7px 16px;
+    background: #1e1e36;
+    color: #e2e8f0;
+    border: 1px solid #2a2a45;
+    font-size: 12px;
+}
+QPushButton:hover {
+    background: #2a2a48;
+    border-color: #3d3d60;
+}
+QPushButton:pressed {
+    background: #16162e;
+}
+QPushButton:disabled {
+    background: #14142a;
+    color: #555;
+    border-color: #1e1e32;
+}
+
+QLineEdit, QTextEdit, QPlainTextEdit {
+    background: #111122;
+    color: #e2e8f0;
+    border: 1px solid #2a2a45;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    selection-background: #7c3aed40;
+}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
+    border-color: #a855f7;
+}
+
+QComboBox {
+    background: #111122;
+    color: #e2e8f0;
+    border: 1px solid #2a2a45;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12px;
+    min-height: 20px;
+}
+QComboBox:hover { border-color: #3d3d60; }
+QComboBox::drop-down {
+    border: none;
+    width: 24px;
+}
+QComboBox::down-arrow {
+    image: none;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #94a3b8;
+    margin-right: 8px;
+}
+QComboBox QAbstractItemView {
+    background: #111122;
+    color: #e2e8f0;
+    border: 1px solid #2a2a45;
+    border-radius: 8px;
+    padding: 4px;
+    selection-background-color: #7c3aed30;
+    outline: none;
+}
+
+/* ---------- 滑块 ---------- */
+QSlider::groove:horizontal {
+    height: 6px;
+    background: #1e1e36;
+    border-radius: 3px;
+}
+QSlider::handle:horizontal {
+    background: #a855f7;
+    width: 16px;
+    height: 16px;
+    margin: -5px 0;
+    border-radius: 8px;
+}
+QSlider::handle:horizontal:hover {
+    background: #c084fc;
+}
+QSlider::sub-page:horizontal {
+    background: #7c3aed60;
+    border-radius: 3px;
+}
+
+/* ---------- 分组框 ---------- */
+QGroupBox {
+    font-weight: bold;
+    color: #cbd5e1;
+    border: 1px solid #1e1e36;
+    border-radius: 10px;
+    margin-top: 12px;
+    padding: 20px 14px 14px 14px;
+    background: #0c0c1a;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 14px;
+    padding: 0 8px;
+    color: #a855f7;
+    font-size: 13px;
+}
+
+/* ---------- 滚动区域 ---------- */
+QScrollArea {
+    border: none;
+    background: transparent;
+}
+
+/* ---------- 列表 ---------- */
+QListWidget {
+    background: #0a0a16;
+    color: #e2e8f0;
+    border: 1px solid #1a1a30;
+    border-radius: 8px;
+    padding: 4px;
+    outline: none;
+}
+QListWidget::item {
+    background: #0e0e20;
+    border-radius: 6px;
+    margin: 2px;
+    padding: 4px;
+}
+QListWidget::item:hover {
+    background: #1a1a3a;
+}
+
+/* ---------- 进度条 ---------- */
+QProgressBar {
+    background: #1e1e36;
+    border: none;
+    border-radius: 6px;
+    height: 8px;
+    text-align: center;
+    color: #e2e8f0;
+    font-size: 10px;
+}
+QProgressBar::chunk {
+    background: qlineargradient(x1:0 y1:0, x2:1 y2:0,
+        stop:0 #7c3aed, stop:1 #a855f7);
+    border-radius: 6px;
+}
+
+/* ---------- 菜单 ---------- */
+QMenu {
+    background: #111122;
+    color: #e2e8f0;
+    border: 1px solid #2a2a45;
+    border-radius: 8px;
+    padding: 4px;
+}
+QMenu::item {
+    padding: 6px 24px 6px 12px;
+    border-radius: 4px;
+}
+QMenu::item:selected {
+    background: #7c3aed30;
+}
+QMenu::separator {
+    height: 1px;
+    background: #2a2a45;
+    margin: 4px 8px;
+}
+
+/* ---------- 消息框 ---------- */
+QMessageBox {
+    background: #0c0c1a;
+}
+QMessageBox QLabel {
+    color: #e2e8f0;
+}

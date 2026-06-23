@@ -262,25 +262,36 @@ class SettingsPanel(QWidget):
         self.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
-                color: #ccc;
-                border: 1px solid #333;
-                border-radius: 8px;
-                margin-top: 8px;
-                padding-top: 16px;
+                color: #cbd5e1;
+                border: 1px solid #1e1e36;
+                border-radius: 10px;
+                margin-top: 12px;
+                padding: 20px 14px 14px 14px;
+                background: #0c0c1a;
             }
-            QGroupBox::title { subcontrol-origin: margin; padding: 0 6px; }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 14px;
+                padding: 0 8px;
+                color: #a855f7;
+                font-size: 13px;
+            }
             QComboBox, QLineEdit {
-                background: #1a1a2e; color: #ddd; border: 1px solid #333;
-                border-radius: 6px; padding: 6px;
+                background: #111122; color: #e2e8f0; border: 1px solid #2a2a45;
+                border-radius: 8px; padding: 7px 10px;
             }
+            QComboBox:hover, QLineEdit:hover { border-color: #3d3d60; }
+            QComboBox:focus, QLineEdit:focus { border-color: #a855f7; }
             QComboBox::drop-down { border: none; }
             QPushButton {
-                background: #2a2a3a; color: #ddd; border: 1px solid #444;
-                border-radius: 6px; padding: 6px 12px;
+                background: #1e1e36; color: #e2e8f0; border: 1px solid #2a2a45;
+                border-radius: 8px; padding: 7px 14px;
             }
-            QPushButton:hover { background: #3a3a4a; }
-            QSlider::groove:horizontal { height: 6px; background: #333; border-radius: 3px; }
-            QSlider::handle:horizontal { background: #7c3aed; width: 14px; border-radius: 7px; }
+            QPushButton:hover { background: #2a2a48; border-color: #3d3d60; }
+            QPushButton:pressed { background: #16162e; }
+            QSlider::groove:horizontal { height: 6px; background: #1e1e36; border-radius: 3px; }
+            QSlider::handle:horizontal { background: #a855f7; width: 16px; border-radius: 8px; }
+            QSlider::handle:horizontal:hover { background: #c084fc; }
         """)
 
     # ---- 公共 API ----

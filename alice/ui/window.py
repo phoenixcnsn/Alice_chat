@@ -68,38 +68,40 @@ class MainWindow(QMainWindow):
 
         # 左侧导航栏
         nav = QWidget()
-        nav.setFixedWidth(56)
+        nav.setFixedWidth(68)
         nav.setObjectName("sidebar")
         nav_layout = QVBoxLayout(nav)
-        nav_layout.setContentsMargins(4, 8, 4, 8)
-        nav_layout.setSpacing(6)
+        nav_layout.setContentsMargins(6, 12, 6, 12)
+        nav_layout.setSpacing(2)
         nav_layout.setAlignment(Qt.AlignTop)
 
-        self.btn_chat = QPushButton("💬")
-        self.btn_chat.setToolTip("聊天"); self.btn_chat.setCheckable(True); self.btn_chat.setChecked(True)
-        self.btn_chat.setFixedSize(44, 44); self.btn_chat.setObjectName("navBtn")
+        # 导航项: (emoji, label, tooltip)
+        nav_items = [
+            ("💬", "聊天",   "聊天"),
+            ("⚙",  "设置",   "设置"),
+            ("🎨", "工坊",   "角色工坊"),
+            ("📸", "素材",   "人物素材"),
+            ("🖼", "图片",   "图片生成"),
+        ]
+        self._nav_buttons = []
 
-        self.btn_settings = QPushButton("⚙")
-        self.btn_settings.setToolTip("设置"); self.btn_settings.setCheckable(True)
-        self.btn_settings.setFixedSize(44, 44); self.btn_settings.setObjectName("navBtn")
+        for i, (emoji, label, tooltip) in enumerate(nav_items):
+            btn = QPushButton(f"{emoji}\n{label}")
+            btn.setToolTip(tooltip)
+            btn.setCheckable(True)
+            btn.setFixedSize(56, 52)
+            btn.setObjectName("navBtn")
+            if i == 0:
+                btn.setChecked(True)
+            nav_layout.addWidget(btn, alignment=Qt.AlignHCenter)
+            self._nav_buttons.append(btn)
 
-        self.btn_workshop = QPushButton("🎨")
-        self.btn_workshop.setToolTip("角色工坊"); self.btn_workshop.setCheckable(True)
-        self.btn_workshop.setFixedSize(44, 44); self.btn_workshop.setObjectName("navBtn")
+        self.btn_chat = self._nav_buttons[0]
+        self.btn_settings = self._nav_buttons[1]
+        self.btn_workshop = self._nav_buttons[2]
+        self.btn_reference = self._nav_buttons[3]
+        self.btn_image = self._nav_buttons[4]
 
-        self.btn_reference = QPushButton("📸")
-        self.btn_reference.setToolTip("人物素材"); self.btn_reference.setCheckable(True)
-        self.btn_reference.setFixedSize(44, 44); self.btn_reference.setObjectName("navBtn")
-
-        self.btn_image = QPushButton("🖼")
-        self.btn_image.setToolTip("图片生成"); self.btn_image.setCheckable(True)
-        self.btn_image.setFixedSize(44, 44); self.btn_image.setObjectName("navBtn")
-
-        nav_layout.addWidget(self.btn_chat)
-        nav_layout.addWidget(self.btn_settings)
-        nav_layout.addWidget(self.btn_workshop)
-        nav_layout.addWidget(self.btn_reference)
-        nav_layout.addWidget(self.btn_image)
         nav_layout.addStretch()
         root.addWidget(nav)
 
@@ -127,7 +129,7 @@ class MainWindow(QMainWindow):
 
         # 状态栏
         self.status_bar = QStatusBar()
-        self.status_label = QLabel("⚪ 无 LLM")
+        self.status_label = QLabel("○ 无 LLM")
         self.save_label = QLabel("")
         self.status_bar.addWidget(self.status_label)
         self.status_bar.addPermanentWidget(self.save_label)
@@ -165,12 +167,13 @@ class MainWindow(QMainWindow):
 
     def _switch_panel(self, idx: int, btn: QPushButton):
         self.stack.setCurrentIndex(idx)
-        for b in [self.btn_chat, self.btn_settings, self.btn_workshop,
-                   self.btn_reference, self.btn_image]:
+        for b in self._nav_buttons:
             b.setChecked(b is btn)
 
     def _init_session(self):
         from alice.ui.settings import _load_settings
+        from alice.ui.state import restore_chat_history as _restore_chat_history
+        from alice.ui.state import restore_emotion_state as _restore_emotion_state
         s = _load_settings()
 
         # 1. 确定初始人格（上次使用的 或 默认）
@@ -178,22 +181,37 @@ class MainWindow(QMainWindow):
         initial_preset = last_preset if last_preset else "默认"
 
         self.session.create_agent(initial_preset, llm_call=None)
-        self.async_run(self.session.ensure_loaded())
-        self.async_run(self.session.refresh_display_state())
         self.reference_panel.refresh_preset_list()
-
-        from alice.ui.state import restore_chat_history as _restore_chat_history
-        restored = _restore_chat_history(self.session.checkpoint_manager, initial_preset)
-        if restored:
-            self.session.agent.conversation_history = restored
-            self.chat_panel.load_history(restored)
-
         self.settings_panel.refresh_preset_list()
+
         # 确保下拉框显示当前实际人格
         if initial_preset != "默认":
             idx = self.settings_panel.preset_combo.findText(initial_preset)
             if idx >= 0:
                 self.settings_panel.preset_combo.setCurrentIndex(idx)
+
+        # 异步初始化: 加载引擎 → 恢复情绪状态 → 恢复对话 → 刷新 UI
+        async def _async_init():
+            await self.session.ensure_loaded()
+            _restore_emotion_state(
+                self.session.checkpoint_manager, initial_preset, self.session.agent
+            )
+            restored = _restore_chat_history(
+                self.session.checkpoint_manager, initial_preset
+            )
+            if restored and self.session.agent:
+                self.session.agent.conversation_history = restored
+            await self.session.refresh_display_state()
+            return restored
+
+        def _on_init_done(restored):
+            if restored:
+                self.chat_panel.load_history(restored)
+            self._emotion_ready = True
+            # 触发情绪栏首次刷新
+            self._on_emotion_timer()
+
+        self.async_run(_async_init(), _on_init_done)
 
         # 2. 自动重连 LLM（如有保存的凭据）
         provider = s.get("provider", "")
@@ -280,10 +298,7 @@ class MainWindow(QMainWindow):
 
                 self.async_run(_restore_image_gen())
 
-        # 初始化完成，允许情绪栏刷新
-        def _mark_ready(_):
-            self._emotion_ready = True
-        self.async_run(self.session.refresh_display_state(), _mark_ready)
+        # 注: _emotion_ready 由 _on_init_done 在上方异步初始化完成后设置
 
     # ---- 定时器 ----
 
@@ -298,7 +313,7 @@ class MainWindow(QMainWindow):
         now = time.time()
         if self.session._last_save_success > 0:
             sec = int(now - self.session._last_save_success)
-            self.save_label.setText("💾 已保存" if sec < 3 else "")
+            self.save_label.setText("已保存" if sec < 3 else "")
         else:
             self.save_label.setText("")
 
@@ -339,10 +354,10 @@ class MainWindow(QMainWindow):
             provider = self.session.llm_provider
             model = self.settings_panel.model_input.text().strip()
             info = f"{provider}" + (f" ({model})" if model else "")
-            self.status_label.setText(f"🟢 已连接: {info}")
+            self.status_label.setText(f"● 已连接: {info}")
             self.setWindowTitle(f"Alice Chat — {info}")
         else:
-            self.status_label.setText("⚪ 无 LLM")
+            self.status_label.setText("○ 无 LLM")
             self.setWindowTitle("Alice Chat — 积温情绪引擎")
 
     def _update_chat_llm_status(self):

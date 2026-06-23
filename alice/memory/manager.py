@@ -117,6 +117,51 @@ class MemoryManager:
         await self.rag.extract_from_messages(llm_call, self.preset_name, batch_size=20)
 
     # ----------------------------------------------------------------
+    # 记忆维护（衰减 + 清理 + 强化）
+    # ----------------------------------------------------------------
+    def run_maintenance(
+        self,
+        half_life_days: float = 30.0,
+        min_weight: float = 0.1,
+    ) -> dict:
+        """
+        执行记忆维护：衰减 → 清理低权重碎片。
+
+        建议通过定时器周期性调用（如每天一次）。
+
+        Args:
+            half_life_days: 半衰期（天）
+            min_weight: 最低权重阈值
+
+        Returns:
+            维护统计信息
+        """
+        # 1. 衰减
+        below = self.store.decay_fragments(half_life_days, min_weight)
+
+        # 2. 清理
+        purged = self.store.purge_low_weight_fragments(min_weight)
+
+        # 3. 统计
+        stats = self.store.get_fragment_stats()
+
+        return {
+            "decayed_below_threshold": below,
+            "purged": purged,
+            "stats": stats,
+        }
+
+    def reinforce_memory(self, fragment_id: int, boost: float = 0.15):
+        """
+        强化某条记忆碎片（被检索命中或用户引用时调用）。
+
+        Args:
+            fragment_id: 碎片 ID
+            boost: 强化增量 (0~1)
+        """
+        self.store.reinforce_fragment(fragment_id, boost)
+
+    # ----------------------------------------------------------------
     # 获取最近消息（用于对话上下文）
     # ----------------------------------------------------------------
     def get_recent_messages(self, limit: int = 20) -> List[Message]:

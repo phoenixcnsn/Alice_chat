@@ -75,9 +75,9 @@ class ReferencePanel(QWidget):
         self.image_list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.image_list.customContextMenuRequested.connect(self._on_context_menu)
         self.image_list.setStyleSheet(
-            "QListWidget { background: #111; border: 1px solid #333; border-radius: 6px; }"
-            "QListWidget::item { background: #1a1a2e; border-radius: 4px; margin: 2px; }"
-            "QListWidget::item:hover { background: #2a2a4e; }"
+            "QListWidget { background: #0a0a16; border: 1px solid #1e1e36; border-radius: 8px; }"
+            "QListWidget::item { background: #0e0e20; border-radius: 6px; margin: 2px; }"
+            "QListWidget::item:hover { background: #1a1a3a; }"
         )
         layout.addWidget(self.image_list, stretch=1)
 
